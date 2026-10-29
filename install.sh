@@ -118,6 +118,40 @@ install_linux_packages() {
     echo "No supported package manager found (apt, dnf, or pacman)." >&2
     echo "Install git, zsh, curl, fzf, direnv, lazygit, and a clipboard utility manually." >&2
   fi
+
+  install_linux_powerlevel10k
+}
+
+# Debian and Ubuntu do not package powerlevel10k, so clone it where .zshrc
+# looks for it.
+install_linux_powerlevel10k() {
+  local target="$HOME/.local/share/powerlevel10k"
+
+  if [[ -r /usr/share/zsh-theme-powerlevel10k/powerlevel10k.zsh-theme || -d "$target" ]]; then
+    return
+  fi
+  run mkdir -p "$(dirname "$target")"
+  run git clone --depth=1 https://github.com/romkatv/powerlevel10k.git "$target"
+}
+
+change_default_shell() {
+  local zsh_path user
+  zsh_path="$(command -v zsh)"
+  user="$(id -un)"
+
+  # chsh refuses shells that are not listed in /etc/shells.
+  if ! grep -qx "$zsh_path" /etc/shells; then
+    echo "Adding $zsh_path to /etc/shells"
+    run_as_root sh -c "echo '$zsh_path' >> /etc/shells"
+  fi
+
+  # Run chsh as root: an unprivileged chsh authenticates the account password
+  # through PAM, which fails on WSL and on accounts without a local password.
+  echo "Changing the default shell to zsh (sudo may prompt for your password)."
+  if ! run_as_root chsh -s "$zsh_path" "$user"; then
+    echo "Could not change the default shell. Run this manually:" >&2
+    echo "  sudo chsh -s $zsh_path $user" >&2
+  fi
 }
 
 configure_iterm2() {
@@ -165,12 +199,14 @@ if command -v git >/dev/null 2>&1; then
 fi
 
 if command -v zsh >/dev/null 2>&1 && [[ "${SHELL:-}" != "$(command -v zsh)" ]]; then
-  echo "Changing the default shell to zsh (you may be prompted for your password)."
-  run chsh -s "$(command -v zsh)"
+  change_default_shell
 fi
 
 echo
 echo "Dotfiles installed. Open a new shell to use them."
 if [[ "$(uname -s)" == Darwin ]]; then
   echo "Quit and reopen iTerm2 so it loads the Dotfiles profile."
+elif grep -qi microsoft /proc/version 2>/dev/null; then
+  echo "On WSL, run 'wsl --shutdown' from Windows so the new default shell takes effect."
+  echo "Install MesloLGS NF in Windows and select it in Windows Terminal for Powerlevel10k icons."
 fi

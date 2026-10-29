@@ -27,6 +27,8 @@ if command -v brew >/dev/null 2>&1 && [[ -r "$(brew --prefix)/share/powerlevel10
   source "$(brew --prefix)/share/powerlevel10k/powerlevel10k.zsh-theme"
 elif [[ -r /usr/share/zsh-theme-powerlevel10k/powerlevel10k.zsh-theme ]]; then
   source /usr/share/zsh-theme-powerlevel10k/powerlevel10k.zsh-theme
+elif [[ -r "$HOME/.local/share/powerlevel10k/powerlevel10k.zsh-theme" ]]; then
+  source "$HOME/.local/share/powerlevel10k/powerlevel10k.zsh-theme"
 fi
 
 [[ ! -r "$HOME/.p10k.zsh" ]] || source "$HOME/.p10k.zsh"
